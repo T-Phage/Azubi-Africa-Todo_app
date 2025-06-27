@@ -107,14 +107,54 @@ app.post('/api/todos', async (req, res) => {
 app.get('/api/gettodos', async (req, res) => {
 
   try {
+    // Parse query parameters with default values
+    const page = parseInt(req.query.page) || 1; // default to page 1
+    const limit = parseInt(req.query.limit) || 10; // default to 10 items per page
 
-    const todoList = await Todos.find();
+    // Calculate the number of documents to skip
+    const skip = (page - 1) * limit;
+
+    // Get total count of documents for pagination info
+    const total = await Todos.countDocuments();
+
+    // Find todos with pagination
+    const todoList = await Todos.find()
+      .skip(skip)
+      .limit(limit);
+
+    // Calculate total pages
+    const numOfPages = Math.ceil(total / limit);
 
     if (!todoList || todoList.length === 0) {
-      return res.status(201).send([]);
+      return res.status(200).json({ 
+        todoList: [],
+        pagination: {
+          total,
+          page,
+          limit,
+          numOfPages
+        }
+      });
     }
 
-    return res.status(201).send({ todoList });
+    return res.status(200).json({ 
+      todoList,
+      pagination: {
+        total,
+        page,
+        limit,
+        numOfPages
+      }
+    });
+    
+
+    // const todoList = await Todos.find();
+
+    // if (!todoList || todoList.length === 0) {
+    //   return res.status(201).send({ todoList: [] });
+    // }
+
+    // return res.status(201).send({ todoList });
   } catch (error) {
     // if (error.errors.title)
     //   return res.status(400).send({ message: "the Title field is required" });
@@ -127,6 +167,42 @@ app.get('/api/gettodos', async (req, res) => {
     // return res.status(500).send({ message: "Internal server error" });
     console.log(error);
     return res.status(500).send({ message: error });
+  }
+});
+
+app.delete('/api/todo/delete/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deletedTodo = await Todos.findByIdAndDelete(id);
+    if (!deletedTodo) {
+      return res.status(404).send({ message: `Todo with id ${id} not found` });
+    }
+    return res.status(200).send({ message: "Todo deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ message: "Error deleting todo", error });
+  }
+});
+
+// Route: Update a todo by ID
+app.put('/api/todos/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, description, activity, date, strStatus } = req.body;
+
+  try {
+    const updatedTodo = await Todos.findByIdAndUpdate(
+      id,
+      { title, description, activity, date, strStatus },
+      { new: true, runValidators: true }
+    );
+    if (!updatedTodo) {
+      return res.status(404).send({ message: "Todo not found" });
+    }
+
+    return res.status(200).send({ todo: updatedTodo });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ message: "Error updating todo", error });
   }
 });
 

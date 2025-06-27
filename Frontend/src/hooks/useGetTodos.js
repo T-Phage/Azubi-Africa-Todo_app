@@ -16,11 +16,12 @@ const useGetTodos = (setTodos, setNumOfPages, setPage) => {
       // );
       // const data = await response.json();
       // console.log("Fetched todos:", await data.todos);
-      const resp = await axios.get("http://localhost:3000/api/gettodos");
+      const resp = await axios.get(`http://localhost:3000/api/gettodos?page=${page}&limit=${limit}`);
       console.log("Fetched todos:", resp.data);
       await setTodos(resp.data.todoList);
-      await setNumOfPages(resp.data.numOfPages);
-      if (page > resp.data.numOfPages) setPage(resp.data.numOfPages);
+      await setNumOfPages(resp.data.pagination.numOfPages);
+      await setPage(resp.data.pagination.page);
+      if (page > resp.data.pagination.numOfPages) setPage(resp.data.pagination.numOfPages);
     } catch (error) {
       CustomErrorAlert(error);
     } finally {
